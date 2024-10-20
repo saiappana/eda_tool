@@ -272,8 +272,18 @@ def categorical_variable(df, column_name):
                 xaxis_title=col_name,
                 yaxis_title=f"{y_axis} ({agg_function})",
                 showlegend=False,
-                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#31333F'),
-                yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#31333F'),
+                xaxis=dict(
+                    showgrid=True,
+                    gridwidth=1,
+                    gridcolor='#31333F',
+                    zerolinecolor='rgba(128, 128, 128, 0.2)'
+                ),
+                yaxis=dict(
+                    showgrid=True,
+                    gridwidth=1,
+                    gridcolor='#31333F',
+                    zerolinecolor='rgba(128, 128, 128, 0.2)'
+                ),
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
                 font=dict(color='white')
@@ -373,13 +383,13 @@ def categorical_variable(df, column_name):
                 xaxis=dict(
                     showgrid=True,
                     gridwidth=1,
-                    gridcolor='rgba(128, 128, 128, 0.2)',
+                    gridcolor='#31333F',
                     zerolinecolor='rgba(128, 128, 128, 0.2)'
                 ),
                 yaxis=dict(
                     showgrid=True,
                     gridwidth=1,
-                    gridcolor='rgba(128, 128, 128, 0.2)',
+                    gridcolor='#31333F',
                     zerolinecolor='rgba(128, 128, 128, 0.2)'
                 )
             )
@@ -464,59 +474,78 @@ def categorical_variable(df, column_name):
                     key=f"agg_function_{col_name}"
                 )
 
-            # Create pivot table
-            if columns_col == "None":
-                pivot_data = df.groupby(col_name)[values_col].agg(agg_function).reset_index()
-                pivot_fig = px.bar(
-                    pivot_data,
-                    x=col_name,
-                    y=values_col,
-                    title=f"Pivot Chart: {agg_function.capitalize()} of {values_col} by {col_name}",
-                    template="plotly_dark"
-                )
-            else:
-                pivot_data = df.pivot_table(
-                    values=values_col,
-                    index=col_name,
-                    columns=columns_col,
-                    aggfunc=agg_function
-                ).reset_index()
-                pivot_fig = px.bar(
-                    pivot_data,
-                    x=col_name,
-                    y=pivot_data.columns[1:],  # All columns except the first (index)
-                    title=f"Pivot Chart: {agg_function.capitalize()} of {values_col} by {col_name} and {columns_col}",
-                    template="plotly_dark",
-                    barmode='group'
+            try:
+                # Create pivot table
+                if columns_col == "None":
+                    pivot_data = df.groupby(col_name)[values_col].agg(agg_function).reset_index()
+                    
+                    # Ensure the data is properly formatted
+                    pivot_fig = px.bar(
+                        pivot_data,
+                        x=col_name,
+                        y=values_col,
+                        title=f"Pivot Chart: {agg_function.capitalize()} of {values_col} by {col_name}",
+                        template="plotly_dark"
+                    )
+                else:
+                    # Create pivot table with error handling
+                    pivot_data = df.pivot_table(
+                        values=values_col,
+                        index=col_name,
+                        columns=columns_col,
+                        aggfunc=agg_function,
+                        fill_value=0  # Fill NaN values with 0
+                    ).reset_index()
+                    
+                    # Melt the pivot table to long format for proper plotting
+                    melted_data = pivot_data.melt(
+                        id_vars=[col_name],
+                        value_vars=pivot_data.columns[1:],
+                        var_name=columns_col,
+                        value_name=values_col
+                    )
+                    
+                    pivot_fig = px.bar(
+                        melted_data,
+                        x=col_name,
+                        y=values_col,
+                        color=columns_col,
+                        title=f"Pivot Chart: {agg_function.capitalize()} of {values_col} by {col_name} and {columns_col}",
+                        template="plotly_dark",
+                        barmode='group'
+                    )
+
+                # Update layout with dark theme
+                pivot_fig.update_layout(
+                    xaxis_title=col_name,
+                    yaxis_title=f"{agg_function.capitalize()} of {values_col}",
+                    font=dict(color='white'),
+                    xaxis=dict(
+                        showgrid=True,
+                        gridwidth=1,
+                        gridcolor='#31333F',
+                        zerolinecolor='rgba(128, 128, 128, 0.2)'
+                    ),
+                    yaxis=dict(
+                        showgrid=True,
+                        gridwidth=1,
+                        gridcolor='#31333F',
+                        zerolinecolor='rgba(128, 128, 128, 0.2)'
+                    ),
+                    showlegend=True,
+                    legend_title_text=columns_col if columns_col != "None" else "",
+                    width=800,
+                    height=600,
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)'
                 )
 
-            # Update layout with dark theme
-            pivot_fig.update_layout(
-                xaxis_title=col_name,
-                yaxis_title=f"{agg_function.capitalize()} of {values_col}",
-                font=dict(color='white'),
-                xaxis=dict(
-                    showgrid=True,
-                    gridwidth=1,
-                    gridcolor='rgba(128, 128, 128, 0.2)',
-                    zerolinecolor='rgba(128, 128, 128, 0.2)'
-                ),
-                yaxis=dict(
-                    showgrid=True,
-                    gridwidth=1,
-                    gridcolor='rgba(128, 128, 128, 0.2)',
-                    zerolinecolor='rgba(128, 128, 128, 0.2)'
-                ),
-                showlegend=True,
-                legend_title_text=columns_col if columns_col != "None" else "",
-                width=800,
-                height=600,
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)'
-            )
-
-            # Display the chart
-            st.plotly_chart(pivot_fig)
+                # Display the chart
+                st.plotly_chart(pivot_fig)
+                
+            except Exception as e:
+                st.error(f"Error creating pivot chart: {str(e)}")
+                st.write("Please try different columns or aggregation functions.")
 
 
     

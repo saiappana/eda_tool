@@ -77,7 +77,7 @@ def create_correlation_heatmap(numerical_dataset):
         )
         fig.add_trace(heatmap)
 
-    # Define buttons with default colors
+    # Define buttons
     buttons = []
     for idx, colorscale_name in enumerate(colorscales.keys()):
         visibility = [i == idx for i in range(len(colorscales))]
@@ -86,7 +86,6 @@ def create_correlation_heatmap(numerical_dataset):
                 label=colorscale_name,
                 method='update',
                 args=[{'visible': visibility}],
-                execute=True
             )
         )
 
@@ -107,7 +106,9 @@ def create_correlation_heatmap(numerical_dataset):
             yanchor='middle',
             direction='down',
             pad={"r": 10, "t": 10},
-            # Using default styles for the buttons
+            bgcolor='lightgray',
+            font=dict(color='black'),
+            bordercolor='gray',
         )]
     )
 

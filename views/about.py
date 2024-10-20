@@ -70,7 +70,7 @@ def show_description():
     <ul>
         <li><b>Data Analysts:</b> Seeking to quickly explore data trends and create insightful visualizations.</li>
         <li><b>Students & Researchers:</b> Working on data-centric projects or academic research.</li>
-        <li><b>Business Professionals:</b> Looking for an easy, no-code solution for visualizing business datasets.</li>
+        <li><b>Business Professionals:</b> Looking for an easy, no-code solution for visualizing datasets.</li>
     </ul>
     </div>
     """, unsafe_allow_html=True)

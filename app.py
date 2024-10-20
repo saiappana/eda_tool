@@ -9,7 +9,7 @@ import colorsys
 
 # Set page config first - MUST be the first Streamlit command
 st.set_page_config(
-    page_icon="assets/plotmaster-high-resolution-logo-transparent.png",
+    page_icon="assets/logo.png",
     page_title="PlotMaster",
     layout="wide",  # This ensures wide layout
     initial_sidebar_state="expanded"  # Makes sure sidebar is expanded by default

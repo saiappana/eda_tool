@@ -153,7 +153,27 @@ def styled_paragraph(content, color="#37474F", font_size="14px"):
 #     # Display the heatmap
 #     st.plotly_chart(fig, use_container_width=True)
 #     Line_Break(100)
-
+def calculate_optimal_bins(data_length):
+    """
+    Calculate bin count dynamically based on dataset size
+    Uses multiple heuristics to determine appropriate bin range
+    """
+    min_bins = 10  # Minimum number of bins
+    max_bins = min(200, int(data_length * 0.1))  # Cap at 10% of dataset size or 200
+    
+    # Heuristics for bin calculation
+    sturges_bins = max(min_bins, int(1 + np.log2(data_length)))
+    sqrt_bins = max(min_bins, int(np.sqrt(data_length)))
+    
+    return {
+        'min_bins': min_bins,
+        'max_bins': max_bins,
+        'default_bins': sqrt_bins,
+        'suggested_bins': {
+            'Sturges': sturges_bins,
+            'Square Root': sqrt_bins
+        }
+    }
             
 def plot_class_distribution_pie_chart(df, column_name):
     # Calculate percentage of each class
@@ -199,7 +219,7 @@ def check_datatype(dataframe,colmun):
 def categorical_variable(df, column_name):
     Line_Break(100)
     col_name = column_name[0]
-    st.subheader(f'{col_name} Feature Analysis')
+    st.title(f"Analysis for {col_name}")
 
     graph1, graph2 = st.columns([2, 1])
 
@@ -307,7 +327,7 @@ def categorical_variable(df, column_name):
                 numerical_cols = [col for col in df.columns if pd.api.types.is_numeric_dtype(df[col])]
                 if numerical_cols:
                     value_col = st.selectbox(
-                        "Select numerical variable for values", 
+                        "Select numerical variable (X-axis)", 
                         numerical_cols,
                         key=f"box_value_select_{col_name}_cat"
                     )
@@ -567,7 +587,7 @@ def extract_numerical_columns(df):
 
 def numarical_Features(df, column_name):
     col_name = column_name[0]
-
+    Line_Break(100)
     st.title(f"Analysis for {col_name}")
 
     graph1, graph2 = st.columns([2, 1])
@@ -579,7 +599,29 @@ def numarical_Features(df, column_name):
     with graph1:
         st.write(f"##### Distribution Of {col_name}")
         hist_color = st.color_picker("Select color for Histogram", "#1f77b4", key=f"hist_color_{col_name}")
-        hist_fig = px.histogram(df, x=col_name, nbins=30, title=f"Histogram of {col_name}", color_discrete_sequence=[hist_color])
+
+        # Calculate bin parameters dynamically
+        bin_params = calculate_optimal_bins(len(df))
+
+        # User selects number of bins with slider
+        num_bins = st.slider(
+            "Number of Bins", 
+            min_value=bin_params['min_bins'], 
+            max_value=bin_params['max_bins'], 
+            value=bin_params['default_bins'],
+            key=f"bins_slider_{col_name}"
+        )
+
+        # Optional: Display suggested bin counts
+        st.caption(f"Suggested bin counts: {bin_params['suggested_bins']}")
+
+        hist_fig = px.histogram(
+            df, 
+            x=col_name, 
+            nbins=num_bins, 
+            title=f"Histogram of {col_name}", 
+            color_discrete_sequence=[hist_color]
+        )
         
         # Update layout for consistency with dark theme
         hist_fig.update_layout(
@@ -806,7 +848,7 @@ def numarical_Features(df, column_name):
                 categorical_cols = [col for col in df.columns if not pd.api.types.is_numeric_dtype(df[col])]
                 if categorical_cols:
                     group_by = st.selectbox(
-                        "Group by (categorical)", 
+                        "Group by (categorical) X-axis", 
                         categorical_cols,
                         key=f"box_group_select_{col_name}"
                     )
@@ -948,7 +990,7 @@ def numarical_Features(df, column_name):
             # Exclude col_name from numeric columns
             numeric_columns = [col for col in df.select_dtypes(include=['float64', 'int64']).columns if col != col_name]
             values_col = st.selectbox(
-                "Select Values", 
+                "Select Y-axis", 
                 numeric_columns,
                 key=f"pivot_values_{col_name}"
             )
@@ -1254,17 +1296,12 @@ st.markdown(
 
 
 if 'uploaded_data' in st.session_state:
-    
     st.title('Plots')
-    # selected_columns = st.multiselect(
-    #                     label="Select Columns for Analysis",
-    #                     options=data.columns 
-    # )
-    
-    # Initialize session state for selected columns if it doesn't exist
-    # Place this at the beginning of your script
-    if 'selected_columns_state' not in st.session_state:
+
+    # Reset selected columns when data changes
+    if 'last_uploaded_data' not in st.session_state or st.session_state.last_uploaded_data is not st.session_state.uploaded_data:
         st.session_state.selected_columns_state = []
+        st.session_state.last_uploaded_data = st.session_state.uploaded_data
 
     # Function to update session state
     def update_selected_columns():
@@ -1290,8 +1327,6 @@ if 'uploaded_data' in st.session_state:
                     categorical_variable(data, [column])
                 elif colmuns_datatype == "float64" or colmuns_datatype == "int64":
                     numarical_Features(data, [column])
-        
-                    
     
 else:
     st.warning("Upload the dataset to view the plots")

@@ -1,5 +1,11 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+import base64
+import plotly.graph_objects as go
+import plotly.express as px
+from streamlit_option_menu import option_menu
+import colorsys
 
 
 def Line_Break(width):
@@ -70,7 +76,7 @@ if 'uploaded_data' in st.session_state:
         start_row = st.number_input("Start row", min_value=0, max_value=len(df)-1, value=0)
     
     with col2:
-        end_row = st.number_input("End row", min_value=0, max_value=len(df), value=min(5, len(df)))
+        end_row = st.number_input("End row", min_value=0, max_value=len(df), value=len(df))
     
     # Validate the range and display the sample
     if start_row < end_row:

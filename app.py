@@ -7,6 +7,7 @@ import plotly.express as px
 from streamlit_option_menu import option_menu
 import colorsys
 
+
 # Set page config first - MUST be the first Streamlit command
 st.set_page_config(
     page_icon="assets/logo.png",

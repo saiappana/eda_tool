@@ -1,11 +1,14 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import base64
 import plotly.graph_objects as go
+import plotly.express as px
+from streamlit_option_menu import option_menu
+import colorsys
+import random
 
 
-
-df = st.session_state.get('uploaded_data',None)
 
 def Line_Break(width):
     line_code=f"""
@@ -19,15 +22,17 @@ def Line_Break(width):
 
 def create_correlation_heatmap(numerical_dataset):
     # Get all numerical columns
-    numerical_columns = numerical_dataset.select_dtypes(include=['float64', 'int64']).columns.tolist()
+    numerical_columns = numerical_dataset.columns.tolist()
 
-    # Create callback to update session state
+    # Callback for multiselect changes
     def on_change():
         st.session_state.correlation_selected_columns = st.session_state.correlation_multiselect
 
     # Initialize the session state if it doesn't exist
     if 'correlation_selected_columns' not in st.session_state:
-        st.session_state.correlation_selected_columns = numerical_columns
+        st.session_state.correlation_selected_columns = random.sample(
+            numerical_columns, min(10, len(numerical_columns))
+        )
 
     # Create the multiselect with the callback
     selected_attributes = st.multiselect(
@@ -42,20 +47,16 @@ def create_correlation_heatmap(numerical_dataset):
         st.warning("Please select at least two attributes for correlation analysis.")
         return
 
+    # Compute the correlation matrix
     correlation_matrix = numerical_dataset[selected_attributes].corr()
 
     # Define the available colorscales
-    colorscales = {
-        'Viridis': 'Viridis',
-        'RdBu': 'RdBu',
-        'Rainbow': 'Rainbow',
-        'Plasma': 'Plasma',
-        'Inferno': 'Inferno'
-    }
+    colorscales = ['Viridis', 'RdBu', 'Rainbow', 'Plasma', 'Inferno']
 
+    # Create the heatmap figure
     fig = go.Figure()
 
-    for colorscale_name, colorscale in colorscales.items():
+    for idx, colorscale in enumerate(colorscales):
         heatmap = go.Heatmap(
             z=correlation_matrix.values,
             x=correlation_matrix.columns,
@@ -65,8 +66,8 @@ def create_correlation_heatmap(numerical_dataset):
             text=correlation_matrix.values,
             texttemplate='%{text:.2f}',
             textfont={'size': 12},
-            name=colorscale_name,
-            visible=(colorscale_name == 'Viridis'),
+            name=colorscale,
+            visible=(idx == 0),
             showscale=True,
             colorbar=dict(
                 title='Correlation',
@@ -77,17 +78,15 @@ def create_correlation_heatmap(numerical_dataset):
         )
         fig.add_trace(heatmap)
 
-    # Define buttons
-    buttons = []
-    for idx, colorscale_name in enumerate(colorscales.keys()):
-        visibility = [i == idx for i in range(len(colorscales))]
-        buttons.append(
-            dict(
-                label=colorscale_name,
-                method='update',
-                args=[{'visible': visibility}],
-            )
+    # Add toggle buttons for colorscales
+    buttons = [
+        dict(
+            label=colorscale,
+            method='update',
+            args=[{'visible': [i == idx for i in range(len(colorscales))]}]
         )
+        for idx, colorscale in enumerate(colorscales)
+    ]
 
     fig.update_layout(
         title="Correlation Heatmap",
@@ -95,7 +94,6 @@ def create_correlation_heatmap(numerical_dataset):
         yaxis_title='Columns',
         width=900,
         height=600,
-        showlegend=True,
         updatemenus=[dict(
             type='buttons',
             showactive=True,
@@ -112,13 +110,6 @@ def create_correlation_heatmap(numerical_dataset):
         )]
     )
 
-    # Add margin to prevent cutoff and adjust paper bgcolor
-    fig.update_layout(
-        margin=dict(r=150),
-        paper_bgcolor='rgba(0,0,0,0)'  # Transparent background
-    )
-
-    # Display the heatmap
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -309,14 +300,23 @@ p, ol, ul, dl {{
 st.markdown(page_bg_img, unsafe_allow_html=True)
 
 if 'uploaded_data' in st.session_state:
+    # Detect if uploaded_data changes
+    if 'prev_uploaded_data_id' not in st.session_state or id(st.session_state['uploaded_data']) != st.session_state['prev_uploaded_data_id']:
+        # Reset correlation session state when dataset changes
+        df = st.session_state['uploaded_data']
+        st.session_state['prev_uploaded_data_id'] = id(df)
+        numerical_columns = extract_numerical_columns(df)
+        st.session_state['correlation_selected_columns'] = random.sample(
+            numerical_columns, min(10, len(numerical_columns))
+        )
+
+    # Proceed with correlation matrix generation
     st.title('Correlation Matrix')
 
-    numrical_col=extract_numerical_columns(df)
+    df = st.session_state['uploaded_data']
+    numerical_columns = extract_numerical_columns(df)
+    numerical_dataset = df[numerical_columns]
 
-    numrical_dataset=df[numrical_col]
-
-
-    create_correlation_heatmap(numrical_dataset)
-
+    create_correlation_heatmap(numerical_dataset)
 else:
-    st.warning("Upload the dataset to view the plots")
+    st.warning("Upload the dataset to view the plots.")
